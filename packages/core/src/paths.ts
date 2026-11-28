@@ -81,6 +81,42 @@ export function readJson(path: string): unknown {
   }
 }
 
+/**
+ * A file a harness keeps its record in, as read: absent (`{}`: a missing file records nothing, which is a complete
+ * read), its object, or why it could not be read. A harness writing it may leave it malformed or cut off for a moment;
+ * that must never read as "it records nothing".
+ */
+export interface RecordRead<T> {
+  readonly value?: T
+  readonly problem?: string
+}
+
+/** Errors that mean the file is not there: nothing recorded. */
+const ABSENT = new Set(['ENOENT', 'ENOTDIR'])
+
+/** Read a harness's record file as text: absent, its text, or why it could not be read. */
+export function readRecordText(path: string): RecordRead<string> {
+  try {
+    return { value: readFileSync(path, 'utf8') }
+  } catch (error: unknown) {
+    const code = (error as { code?: unknown }).code
+    if (typeof code === 'string' && ABSENT.has(code)) return {}
+    return { problem: `${path} could not be read (${error instanceof Error ? error.message : String(error)})` }
+  }
+}
+
+/** Read a harness's JSON object record (see {@link RecordRead}). */
+export function readJsonRecord(path: string): RecordRead<Record<string, unknown>> {
+  const text = readRecordText(path)
+  if (text.value === undefined) return text.problem === undefined ? {} : { problem: text.problem }
+  try {
+    const value: unknown = JSON.parse(text.value)
+    return isPlainObject(value) ? { value } : { problem: `${path} is not a JSON object` }
+  } catch (error: unknown) {
+    return { problem: `${path} is not valid JSON (${error instanceof Error ? error.message : String(error)})` }
+  }
+}
+
 /** Parse JSON and require a plain object. */
 export function readJsonObject(path: string): Record<string, unknown> | undefined {
   const value = readJson(path)

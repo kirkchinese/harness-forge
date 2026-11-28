@@ -60,7 +60,7 @@ export function repositoryRootOf(dir: string): string | undefined {
  * stand in for the marker (a symbolic-link marker never claims a main checkout).
  */
 function linkedMainCheckout(marker: string): string | undefined {
-  const target = /^gitdir:\s*(.+?)\s*$/mu.exec(readText(marker) ?? '')?.[1]
+  const target = gitdirOf(readText(marker) ?? '')
   if (target === undefined) return undefined
   const gitdir = realOrLexical(resolve(dirname(marker), target))
   const main = /^(.*)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/u.exec(gitdir)?.[1]
@@ -70,6 +70,16 @@ function linkedMainCheckout(marker: string): string | undefined {
   const backPath = resolve(gitdir, back)
   if (basename(backPath) !== '.git') return undefined
   return samePath(join(realOrLexical(dirname(backPath)), '.git'), marker) ? realOrLexical(main) : undefined
+}
+
+/** The path of the first `gitdir:` line (a scan: `/^gitdir:\s*(.+?)\s*$/m` is quadratic on a long line). */
+function gitdirOf(text: string): string | undefined {
+  for (const line of text.split(/\r?\n|\r/u)) {
+    if (!line.startsWith('gitdir:')) continue
+    const value = line.slice('gitdir:'.length).trim()
+    if (value.length > 0) return value
+  }
+  return undefined
 }
 
 function isSymbolicLink(path: string): boolean {

@@ -43,6 +43,16 @@ describe('server names', () => {
     expect(long.length).toBeLessThanOrEqual(32)
     expect(mcpServerName('plugin_a-very-long-plugin-name_and-a-long-server')).toBe(long)
   })
+
+  it('never puts "__" in a name, so mcp__<server>__<tool> names one server', () => {
+    for (const name of ['app__reports', 'a b__c', `${'x'.repeat(22)}__${'y'.repeat(20)}`, '-__-', '__']) {
+      const server = mcpServerName(name)
+      expect(server).toMatch(/^[A-Za-z0-9_-]{1,32}$/u)
+      expect(server).not.toContain('__')
+      expect(server).not.toMatch(/^_|_$/u)
+    }
+    expect(mcpServerName('app__reports')).not.toBe(mcpServerName('app_reports'))
+  })
 })
 
 describe('mcpClientConfig', () => {

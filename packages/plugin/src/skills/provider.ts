@@ -42,6 +42,8 @@ export interface SkillRootOrigin {
   readonly pluginRoot?: string
   /** The plugin's name; a skill a DSH-native skill would shadow is listed as `<plugin>-<skill>`. */
   readonly pluginName?: string
+  /** The suffix that tells this plugin from another of the same name; a skill name both ship takes it, so one plugin has one suffix. */
+  readonly pluginVariant?: string
   readonly dataDir?: string
   /** A project's skills are listed only to sessions whose directory is inside the project. */
   readonly projectRoot?: string
@@ -162,7 +164,7 @@ export class ForeignSkillProvider implements SkillProvider {
       const prefixed = origin.pluginName !== undefined && native.has(candidate.name) ? `${kebab(origin.pluginName)}-${candidate.name}` : candidate.name
       // Two plugins may ship a skill with the same name; the later one stays
       // reachable under a stable suffix instead of breaking the catalog.
-      const name = names.has(prefixed) || native.has(prefixed) ? `${prefixed}-${shortHash(bodyPath, 6)}` : prefixed
+      const name = names.has(prefixed) || native.has(prefixed) ? `${prefixed}-${origin.pluginVariant ?? shortHash(bodyPath, 6)}` : prefixed
       names.add(name)
       candidates.push(name === candidate.name ? candidate : { ...candidate, name })
     }
